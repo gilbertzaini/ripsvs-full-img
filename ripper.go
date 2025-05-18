@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"image/jpeg"
 	"io"
 	"io/ioutil"
@@ -19,9 +18,6 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"github.com/zenthangplus/goccm"
 	"golang.org/x/image/draw"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/math/fixed"
 )
 
 type ripper struct {
@@ -136,8 +132,8 @@ func (r *ripper) rip(svsFile string) error {
 	// Limit number of concurrent tile downloads.
 	c := goccm.New(r.concurrency)
 
-	previewScale := 4
-	completeImg := image.NewRGBA(image.Rect(0, 0, width/previewScale, height/previewScale))
+	previewScale := 1
+	completeImg := image.NewRGBA(image.Rect(0, 0, width, height))
 
 	// Download tiles.
 	for x := 0; x < xTiles; x++ {
@@ -180,13 +176,13 @@ func (r *ripper) rip(svsFile string) error {
 
 				draw.CatmullRom.Scale(completeImg, drawRect, img, img.Bounds(), draw.Over, nil)
 
-				d := &font.Drawer{
-					Dst:  completeImg,
-					Src:  image.NewUniform(color.Black),
-					Face: basicfont.Face7x13,
-					Dot:  fixed.Point26_6{fixed.I(drawX + 3), fixed.I(drawY + 13)},
-				}
-				d.DrawString(fileName)
+				// d := &font.Drawer{
+				// 	Dst:  completeImg,
+				// 	Src:  image.NewUniform(color.Black),
+				// 	Face: basicfont.Face7x13,
+				// 	Dot:  fixed.Point26_6{fixed.I(drawX + 3), fixed.I(drawY + 13)},
+				// }
+				// d.DrawString(fileName)
 
 				bar.Add(1)
 				c.Done()
@@ -198,17 +194,17 @@ func (r *ripper) rip(svsFile string) error {
 	c.WaitAllDone()
 
 	// Add grid lines to preview image.
-	for x := 0; x < xTiles; x++ {
-		for y := 0; y < completeImg.Rect.Dy(); y++ {
-			completeImg.Set(x*r.tileSize/previewScale, y, color.Black)
-		}
-	}
+	// for x := 0; x < xTiles; x++ {
+	// 	for y := 0; y < completeImg.Rect.Dy(); y++ {
+	// 		completeImg.Set(x*r.tileSize/previewScale, y, color.Black)
+	// 	}
+	// }
 
-	for y := 0; y < yTiles; y++ {
-		for x := 0; x < completeImg.Rect.Dx(); x++ {
-			completeImg.Set(x, y*r.tileSize/previewScale, color.Black)
-		}
-	}
+	// for y := 0; y < yTiles; y++ {
+	// 	for x := 0; x < completeImg.Rect.Dx(); x++ {
+	// 		completeImg.Set(x, y*r.tileSize/previewScale, color.Black)
+	// 	}
+	// }
 
 	// Write preview image.
 	previewFile := filepath.Join(imgDir, "preview.jpeg")
@@ -223,6 +219,8 @@ func (r *ripper) rip(svsFile string) error {
 	opt.Quality = 100
 	log.Printf("Writing preview image...")
 	jpeg.Encode(out, completeImg, &opt)
+
+	os.RemoveAll(tilesDir)
 
 	return nil
 }
